@@ -1,40 +1,38 @@
 import { put } from "@vercel/blob";
-import crypto from "crypto";
 
-// Tiny 1x1 PNG so you can test end-to-end before Gemini
+// Temporary placeholder image (1x1 PNG)
+// We will replace this with Gemini generation next
 const ONE_BY_ONE_PNG_BASE64 =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO5L2m0AAAAASUVORK5CYII=";
 
 export async function POST(req: Request) {
   try {
-    // 1) Auth
+    // 🔐 1. Auth check
     const auth = req.headers.get("authorization") || "";
     if (auth !== `Bearer ${process.env.BRAZE_SHARED_SECRET}`) {
       return Response.json({ error: "unauthorized" }, { status: 401 });
     }
 
-    // 2) Body
+    // 📦 2. Parse body
     const body = await req.json();
     const hero = String(body?.hero || "");
     const external_id = String(body?.external_id || "");
     const prompt_version = String(body?.prompt_version || "v1");
 
     if (!hero || !external_id) {
-      return Response.json({ error: "missing hero or external_id" }, { status: 400 });
+      return Response.json(
+        { error: "missing hero or external_id" },
+        { status: 400 }
+      );
     }
 
-    // 3) Deterministic-ish filename
-    // Your naming concept: HERO1_Userid
-    // Add a short hash so we can safely version later without collisions.
-    const seed = `${hero}_${external_id}_${prompt_version}`;
-    const shortHash = crypto.createHash("sha256").update(seed).digest("hex").slice(0, 10);
+    // 📁 3. Deterministic filename (NO HASH)
+    const pathname = `braze-images/${hero}_${external_id}_${prompt_version}.png`;
 
-    const pathname = `braze-images/${hero}_${external_id}_${prompt_version}_${shortHash}.png`;
-
-    // 4) Placeholder image buffer
+    // 🖼 4. Placeholder image buffer
     const pngBuffer = Buffer.from(ONE_BY_ONE_PNG_BASE64, "base64");
 
-    // 5) Upload to Vercel Blob (public). Stable name (no random suffix).
+    // ☁️ 5. Upload to Vercel Blob (public + stable name)
     const blob = await put(pathname, pngBuffer, {
       access: "public",
       contentType: "image/png",
